@@ -1,0 +1,70 @@
+# This file is a template, and might need editing before it works on your project.
+# To contribute improvements to CI/CD templates, please follow the Development guide at:
+# https://docs.gitlab.com/ee/development/cicd/templates.html
+# This specific template is located at:
+# https://gitlab.com/gitlab-org/gitlab/-/blob/master/lib/gitlab/ci/templates/Terraform.gitlab-ci.yml
+
+image:
+  name: registry.gitlab.com/gitlab-org/gitlab-build-images:terraform
+  entrypoint:
+    - '/usr/bin/env'
+    - 'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
+
+variables:
+  TF_VAR_gitlab_token: ${GITLAB_ACCESS_TOKEN}
+  AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY}
+  AWS_SECRET_ACCESS_KEY : ${AWS_SECRET_KEY}
+  AWS_DEFAULT_REGION: "us-east-1"
+
+cache:
+  paths:
+    - .terraform
+
+before_script:
+  - terraform --version
+  - terraform init -backend-config="state.config"
+
+stages:
+  - validate
+  - plan
+  - build
+  - apply
+  - destroy
+
+validate:
+  stage: validate
+  script:
+    - terraform validate
+
+plan:
+  stage: plan
+  script:
+    - terraform plan -out="planfile"
+  dependencies:
+    - validate
+  artifacts:
+    paths:
+      - planfile
+
+build:
+  stage: build
+  script:
+    - build
+  dependencies:
+    - plan
+
+apply:
+  stage: apply
+  script:
+    - terraform apply --auto-approve
+  dependencies:
+    - build
+  environment:
+    name: $TF_STATE_NAME
+
+destroy:
+  stage: destroy
+  script:
+    - terraform destroy --auto-approve
+  dependencies:
+    - apply
