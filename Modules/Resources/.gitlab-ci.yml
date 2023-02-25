@@ -5,11 +5,9 @@
 # https://gitlab.com/gitlab-org/gitlab/-/blob/master/lib/gitlab/ci/templates/Terraform.gitlab-ci.yml
 
 image:
-  name: registry.gitlab.com/gitlab-org/gitlab-build-images:terraform
-  entrypoint:
-    - '/usr/bin/env'
-    - 'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
-
+  name: hashicorp/terraform:light
+  entrypoint: [""]
+  
 variables:
   TF_VAR_gitlab_token: ${GITLAB_ACCESS_TOKEN}
   AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY}
@@ -47,9 +45,10 @@ plan:
       - planfile
 
 build:
-  stage: build
-  script:
-    - build
+  extends: .terraform:build
+  environment:
+    name: $ECS_Dev
+    action: prepare
   dependencies:
     - plan
 
@@ -60,7 +59,7 @@ apply:
   dependencies:
     - build
   environment:
-    name: $TF_STATE_NAME
+    name: $ECS_Dev
 
 destroy:
   stage: destroy
